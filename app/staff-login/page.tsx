@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 // Staff access code. Change this to update the login code.
-const STAFF_CODE = "4521"
+const STAFF_CODE = "5411"
 
 export default function StaffLoginPage() {
   const [code, setCode] = useState("")
@@ -91,6 +91,13 @@ export default function StaffLoginPage() {
                 Unlock Staff Page
               </Button>
             </form>
+
+            <div className="mt-6 flex flex-col items-center gap-2 border-t border-border/60 pt-6 text-center">
+              <p className="text-sm text-muted-foreground">Are you the owner?</p>
+              <Button asChild variant="outline" size="sm" className="font-semibold">
+                <Link href="/owner-login">Owner login</Link>
+              </Button>
+            </div>
           </div>
         )}
       </main>
@@ -139,7 +146,6 @@ function getAccountAge(id: string): AgeResult | null {
 function PrivateStaffPanel() {
   const [staffName, setStaffName] = useState("")
   const [staffNameInput, setStaffNameInput] = useState("")
-  const [staffIdInput, setStaffIdInput] = useState("")
   const [staffNameError, setStaffNameError] = useState("")
 
   const [userId, setUserId] = useState("")
@@ -208,11 +214,6 @@ function PrivateStaffPanel() {
     setRoleError("")
     setRoleSuccess(false)
 
-    if (!/^\d{17,20}$/.test(staffIdInput.trim())) {
-      setRoleError("Enter your own Discord user ID (17-20 digits) to verify your admin role.")
-      return
-    }
-
     setRoleLoading(true)
     try {
       const res = await fetch("/api/discord/add-role", {
@@ -223,7 +224,6 @@ function PrivateStaffPanel() {
           guildId: guildId.trim(),
           roleId: roleId.trim(),
           staff: staffName,
-          staffId: staffIdInput.trim(),
         }),
       })
       const data = await res.json()
@@ -389,27 +389,11 @@ function PrivateStaffPanel() {
       <div className="mt-8 w-full border-t border-border/60 pt-8">
         <h2 className="font-display text-lg font-bold uppercase tracking-wide text-foreground">Add Role in a Server</h2>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          Assign a role to the user above. Only staff with the required admin role can add roles, so enter your own
-          Discord user ID below to verify. The bot must be in the server with Manage Roles permission, and the user must
+          Assign a role to the user above. The bot must be in the server with Manage Roles permission, and the user must
           already be a member.
         </p>
 
         <form onSubmit={handleAddRole} className="mt-5 flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="staff-id">Your Discord User ID (admin verification)</Label>
-            <Input
-              id="staff-id"
-              inputMode="numeric"
-              value={staffIdInput}
-              onChange={(e) => {
-                setStaffIdInput(e.target.value)
-                setRoleError("")
-                setRoleSuccess(false)
-              }}
-              placeholder="e.g. 1234567890123456789"
-              autoComplete="off"
-            />
-          </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="guild-id">Server (Guild) ID</Label>
             <Input
