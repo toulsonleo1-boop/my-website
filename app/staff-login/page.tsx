@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 // Staff access code. Change this to update the login code.
-const STAFF_CODE = "4521"
+const STAFF_CODE = "5411"
 
 export default function StaffLoginPage() {
   const [code, setCode] = useState("")
