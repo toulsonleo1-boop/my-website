@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { logStaffAction } from "@/lib/discord-log"
-import { verifyStaffRole } from "@/lib/staff-auth"
 
 export async function POST(req: Request) {
   const token = process.env.DISCORD_BOT_TOKEN
@@ -12,28 +11,14 @@ export async function POST(req: Request) {
   let guildId: string
   let roleId: string
   let staff: string
-  let staffId: string
   try {
     const body = await req.json()
     userId = String(body.userId ?? "").trim()
     guildId = String(body.guildId ?? "").trim()
     roleId = String(body.roleId ?? "").trim()
     staff = String(body.staff ?? "Unknown").trim()
-    staffId = String(body.staffId ?? "").trim()
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 })
-  }
-
-  // Server-side gate: the acting staff member must hold the required admin role.
-  const auth = await verifyStaffRole(staffId)
-  if (!auth.ok) {
-    await logStaffAction({
-      staff,
-      action: "Add role",
-      success: false,
-      details: { "Staff ID": staffId || "(none)", Result: `Blocked: ${auth.error}` },
-    })
-    return NextResponse.json({ error: auth.error }, { status: auth.status })
   }
 
   if (![userId, guildId, roleId].every((v) => /^\d{17,20}$/.test(v))) {
