@@ -1,4 +1,4 @@
-import { Shield, Heart, Zap, Trophy } from "lucide-react"
+import { Shield, Heart, Zap, Trophy, Code2 } from "lucide-react"
 import { SectionHeading } from "@/components/section-heading"
 import { DiscordMemberCount } from "@/components/discord-member-count"
 
@@ -11,7 +11,22 @@ const values = [
 
 export function About() {
   return (
-    <section id="about" className="py-20 md:py-28">
+    <section id="about" className="relative py-20 md:py-28">
+      <a
+        href="https://web-showcase--chrxme25.replit.app/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="absolute right-4 top-6 z-10 flex max-w-[220px] items-start gap-2 rounded-xl border border-border bg-card/80 p-3 text-left backdrop-blur transition-colors hover:border-primary/50 hover:bg-card"
+      >
+        <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary">
+          <Code2 className="h-4 w-4" />
+        </span>
+        <span className="text-xs leading-relaxed text-muted-foreground">
+          This website has been custom coded by{" "}
+          <span className="font-semibold text-foreground">@chrxme.gg</span> on Discord.{" "}
+          <span className="text-primary underline">View my dev site</span>
+        </span>
+      </a>
       <div className="mx-auto max-w-6xl px-4">
         <SectionHeading
           align="left"
