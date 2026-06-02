@@ -13,9 +13,8 @@ export function Giveaways() {
   const [now, setNow] = useState<number | null>(null)
 
   useEffect(() => {
+    // Timer is paused: capture the current time once and do not tick.
     setNow(Date.now())
-    const id = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(id)
   }, [])
 
   const ready = now !== null
@@ -61,6 +60,21 @@ export function Giveaways() {
             <Gift className="h-4 w-4" />
             Giveaways
           </span>
+        </div>
+
+        {/* Scrolling red alert bar */}
+        <div className="mt-8 overflow-hidden rounded-full border border-red-500/50 bg-red-600/15 py-2">
+          <div className="flex w-max animate-[giveaway-marquee_18s_linear_infinite] whitespace-nowrap">
+            {[0, 1].map((i) => (
+              <span
+                key={i}
+                aria-hidden={i === 1}
+                className="px-8 text-sm font-bold uppercase tracking-[0.2em] text-red-400"
+              >
+                @chrxme.gg main discord is currently broken, the giveaway will resume soon, more info in due course.
+              </span>
+            ))}
+          </div>
         </div>
 
         <div className="mx-auto mt-10 max-w-2xl text-center">
