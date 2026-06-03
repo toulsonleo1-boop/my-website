@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Lock, ShieldCheck, ArrowLeft, AlertCircle, CalendarClock, UserSearch, UserPlus, CheckCircle2, UserCircle } from "lucide-react"
+import { Lock, ShieldCheck, ArrowLeft, AlertCircle, CalendarClock, UserSearch, UserPlus, CheckCircle2, UserCircle, Gift, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -288,7 +288,8 @@ function PrivateStaffPanel() {
   const actionedUser = username ?? (result ? userId.trim() : null)
 
   return (
-    <div className="w-full max-w-4xl rounded-2xl border border-primary/40 bg-card p-8">
+    <div className="flex w-full max-w-4xl flex-col gap-6">
+    <div className="w-full rounded-2xl border border-primary/40 bg-card p-8">
       <div className="flex flex-col items-center text-center">
         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground">
           <ShieldCheck className="h-6 w-6" />
@@ -462,6 +463,111 @@ function PrivateStaffPanel() {
       </div>
       </div>
       </div>
+
+      <GiveawayEntries />
+    </div>
+  )
+}
+
+type GiveawayEntry = {
+  id: number
+  discord_username: string
+  discord_id: string
+  created_at: string
+}
+
+function GiveawayEntries() {
+  const [entries, setEntries] = useState<GiveawayEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  async function load() {
+    setLoading(true)
+    setError("")
+    try {
+      const res = await fetch("/api/giveaway/entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: STAFF_CODE }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? "Could not load entries.")
+      } else {
+        setEntries(data.entries ?? [])
+      }
+    } catch {
+      setError("Network error while loading entries.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    void load()
+  }, [])
+
+  return (
+    <div className="w-full rounded-2xl border border-primary/40 bg-card p-8">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Gift className="h-5 w-5" />
+          </span>
+          <div>
+            <h2 className="font-display text-lg font-bold uppercase tracking-wide text-foreground">
+              Giveaway Entries
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Everyone who entered the Discord Nitro giveaway ({entries.length} total).
+            </p>
+          </div>
+        </div>
+        <Button onClick={load} variant="secondary" size="sm" className="font-semibold" disabled={loading}>
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      </div>
+
+      {error && (
+        <div className="mt-5 flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {!error && (
+        <div className="mt-5 overflow-hidden rounded-xl border border-border">
+          <div className="grid grid-cols-[1fr_1fr_auto] gap-4 border-b border-border bg-background/40 px-4 py-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            <span>Username</span>
+            <span>Discord ID</span>
+            <span className="text-right">Entered</span>
+          </div>
+          {loading ? (
+            <p className="px-4 py-6 text-center text-sm text-muted-foreground">Loading entries...</p>
+          ) : entries.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-muted-foreground">No entries yet.</p>
+          ) : (
+            entries.map((entry) => (
+              <div
+                key={entry.id}
+                className="grid grid-cols-[1fr_1fr_auto] items-center gap-4 border-b border-border/60 px-4 py-3 text-sm last:border-b-0"
+              >
+                <span className="break-words font-medium text-foreground">{entry.discord_username}</span>
+                <span className="break-all font-mono text-xs text-muted-foreground">{entry.discord_id}</span>
+                <span className="text-right text-xs text-muted-foreground">
+                  {new Date(entry.created_at).toLocaleString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   )
 }

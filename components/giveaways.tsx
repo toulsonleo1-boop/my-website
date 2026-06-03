@@ -1,11 +1,21 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Gift, Clock, Bell, Disc3 } from "lucide-react"
+import { Gift, Clock, Trophy, MessageCircle, AlertCircle, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
-// Giveaway ends Tuesday 2nd June 2026, 7pm BST (BST is UTC+1, so 18:00 UTC)
-const TARGET = Date.UTC(2026, 5, 2, 18, 0, 0)
+// Giveaway ends Thursday 4th June 2026, 7pm BST (BST is UTC+1, so 18:00 UTC)
+const TARGET = Date.UTC(2026, 5, 4, 18, 0, 0)
 
 export function Giveaways() {
   // The current time is computed only on the client after mount to avoid
@@ -25,6 +35,61 @@ export function Giveaways() {
   const minutes = Math.floor((diff / (1000 * 60)) % 60)
   const seconds = Math.floor((diff / 1000) % 60)
   const ended = ready && diff === 0
+
+  // Entry dialog state
+  const [open, setOpen] = useState(false)
+  const [discordUsername, setDiscordUsername] = useState("")
+  const [discordId, setDiscordId] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState(false)
+
+  async function handleEnter(e: React.FormEvent) {
+    e.preventDefault()
+    setError("")
+
+    if (discordUsername.trim().length < 2) {
+      setError("Enter your Discord username.")
+      return
+    }
+    if (!/^\d{17,20}$/.test(discordId.trim())) {
+      setError("Enter a valid Discord user ID (17-20 digits).")
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const res = await fetch("/api/giveaway/enter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          discordUsername: discordUsername.trim(),
+          discordId: discordId.trim(),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? "Could not enter. Try again.")
+      } else {
+        setSuccess(true)
+      }
+    } catch {
+      setError("Network error. Try again.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  function resetDialog() {
+    setOpen(false)
+    // Delay reset so the closing animation isn't jarring
+    setTimeout(() => {
+      setDiscordUsername("")
+      setDiscordId("")
+      setError("")
+      setSuccess(false)
+    }, 200)
+  }
 
   const endDate = useMemo(() => {
     if (!ready) return null
@@ -77,8 +142,8 @@ export function Giveaways() {
           </h2>
           <p className="mx-auto mt-5 max-w-md text-pretty text-lg leading-relaxed text-muted-foreground">
             We&apos;re giving away{" "}
-            <span className="font-semibold text-[#c4b5fd]">Discord Nitro</span> in{" "}
-            <span className="font-semibold text-foreground">2 days</span>. Join the Discord and stay active to enter!
+            <span className="font-semibold text-[#c4b5fd]">1x Discord Nitro</span>. Join the Discord, enter below, and
+            stay active to win!
           </p>
         </div>
 
@@ -126,13 +191,12 @@ export function Giveaways() {
 
           <div className="mt-6 flex justify-center">
             <Button
-              asChild
+              onClick={() => setOpen(true)}
               className="font-semibold text-white"
               style={{ background: "linear-gradient(90deg, #7c3aed 0%, #a855f7 100%)" }}
             >
-              <a href="https://discord.gg/N7JuDnY5Bt" target="_blank" rel="noopener noreferrer">
-                Enter on Discord
-              </a>
+              <Gift className="h-4 w-4" />
+              Enter Giveaway
             </Button>
           </div>
         </div>
@@ -147,23 +211,21 @@ export function Giveaways() {
           </h3>
           <div className="flex items-start gap-3">
             <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#7c3aed]/40 bg-background/40 text-[#c4b5fd]">
-              <Bell className="h-4 w-4" />
+              <Trophy className="h-4 w-4" />
             </span>
             <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
-              When the timer runs out,{" "}
-              <span className="font-semibold text-foreground">@everyone</span> will be pinged in the
-              Discord server.
+              Once the time is up, a{" "}
+              <span className="font-semibold text-foreground">winner will be announced right here</span>.
             </p>
           </div>
           <div className="flex items-start gap-3">
             <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#7c3aed]/40 bg-background/40 text-[#c4b5fd]">
-              <Disc3 className="h-4 w-4" />
+              <MessageCircle className="h-4 w-4" />
             </span>
             <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
-              Everyone who{" "}
-              <span className="font-semibold text-foreground">reacts to the message</span> gets put
-              on a <span className="font-semibold text-[#c4b5fd]">wheel spin</span> to decide the
-              winner.
+              The winner will have{" "}
+              <span className="font-semibold text-[#c4b5fd]">2 hours from the end</span> to DM{" "}
+              <span className="font-semibold text-foreground">@chrxme.gg</span> on Discord to claim their prize.
             </p>
           </div>
         </aside>
@@ -171,6 +233,90 @@ export function Giveaways() {
 
         <p className="mt-6 text-center text-xs text-muted-foreground">by @chrxme.gg</p>
       </div>
+
+      {/* Enter giveaway dialog */}
+      <Dialog open={open} onOpenChange={(o) => (o ? setOpen(true) : resetDialog())}>
+        <DialogContent className="sm:max-w-md">
+          {success ? (
+            <div className="flex flex-col items-center py-4 text-center">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#7c3aed]/15 text-[#c4b5fd]">
+                <CheckCircle2 className="h-7 w-7" />
+              </span>
+              <DialogTitle className="mt-4 font-display text-2xl font-bold uppercase tracking-wide">
+                You&apos;re Entered!
+              </DialogTitle>
+              <DialogDescription className="mt-2">
+                Good luck! The winner will be announced right here when the timer ends.
+              </DialogDescription>
+              <Button onClick={resetDialog} className="mt-6 font-semibold">
+                Done
+              </Button>
+            </div>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle className="font-display text-2xl font-bold uppercase tracking-wide">
+                  Enter the Giveaway
+                </DialogTitle>
+                <DialogDescription>
+                  Enter your Discord details to be entered into the 1x Discord Nitro giveaway.
+                </DialogDescription>
+              </DialogHeader>
+
+              <form onSubmit={handleEnter} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="discord-username">Discord Username</Label>
+                  <Input
+                    id="discord-username"
+                    value={discordUsername}
+                    onChange={(e) => {
+                      setDiscordUsername(e.target.value)
+                      setError("")
+                    }}
+                    placeholder="e.g. chrxme.gg"
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="discord-id">Discord User ID</Label>
+                  <Input
+                    id="discord-id"
+                    inputMode="numeric"
+                    value={discordId}
+                    onChange={(e) => {
+                      setDiscordId(e.target.value)
+                      setError("")
+                    }}
+                    placeholder="e.g. 1234567890123456789"
+                    autoComplete="off"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enable Developer Mode in Discord, right-click your name, and choose &quot;Copy User ID&quot;.
+                  </p>
+                </div>
+
+                {error && (
+                  <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    {error}
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full font-semibold text-white"
+                    style={{ background: "linear-gradient(90deg, #7c3aed 0%, #a855f7 100%)" }}
+                  >
+                    {submitting ? "Entering..." : "Confirm Entry"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }
