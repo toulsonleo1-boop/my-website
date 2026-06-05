@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
-import { Lock, ShieldCheck, ArrowLeft, AlertCircle, CalendarClock, UserSearch, UserPlus, CheckCircle2, UserCircle } from "lucide-react"
+import { Lock, ShieldCheck, ArrowLeft, AlertCircle, CalendarClock, UserSearch, UserPlus, CheckCircle2, UserCircle, Gift, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -462,6 +462,112 @@ function PrivateStaffPanel() {
       </div>
       </div>
       </div>
+
+      <GiveawayEntries />
+    </div>
+  )
+}
+
+type Entry = {
+  id: string
+  giveaway: string
+  discordUsername: string
+  discordId: string
+  createdAt: string
+}
+
+function GiveawayEntries() {
+  const [entries, setEntries] = useState<Entry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError("")
+    try {
+      const res = await fetch("/api/giveaway/entries", { cache: "no-store" })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? "Could not load entries.")
+      } else {
+        setEntries(data.entries ?? [])
+      }
+    } catch {
+      setError("Network error while loading entries.")
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  return (
+    <div className="mt-8 w-full border-t border-border/60 pt-8">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <Gift className="h-5 w-5 text-primary" />
+          <h2 className="font-display text-lg font-bold uppercase tracking-wide text-foreground">
+            Giveaway Entries
+          </h2>
+          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
+            {entries.length}
+          </span>
+        </div>
+        <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      </div>
+      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+        Everyone who entered a giveaway from the website, newest first.
+      </p>
+
+      {error && (
+        <div className="mt-4 flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {!error && !loading && entries.length === 0 && (
+        <div className="mt-4 rounded-xl border border-border bg-background/40 p-6 text-center text-sm text-muted-foreground">
+          No entries yet.
+        </div>
+      )}
+
+      {entries.length > 0 && (
+        <div className="mt-4 overflow-x-auto rounded-xl border border-border">
+          <table className="w-full min-w-[520px] text-left text-sm">
+            <thead className="border-b border-border bg-card/60">
+              <tr className="text-xs uppercase tracking-widest text-muted-foreground">
+                <th className="px-4 py-3 font-semibold">Username</th>
+                <th className="px-4 py-3 font-semibold">User ID</th>
+                <th className="px-4 py-3 font-semibold">Giveaway</th>
+                <th className="px-4 py-3 font-semibold">Entered</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map((entry) => (
+                <tr key={entry.id} className="border-b border-border/60 last:border-0">
+                  <td className="px-4 py-3 font-semibold text-foreground">{entry.discordUsername}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{entry.discordId}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{entry.giveaway}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {new Date(entry.createdAt).toLocaleString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }

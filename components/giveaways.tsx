@@ -1,50 +1,67 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { Gift, Clock, Bell, Disc3 } from "lucide-react"
+import { useState } from "react"
+import { Gift, Bell, Disc3, Ticket, AlertCircle, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-
-// Giveaway ends Tuesday 2nd June 2026, 7pm BST (BST is UTC+1, so 18:00 UTC)
-const TARGET = Date.UTC(2026, 5, 2, 18, 0, 0)
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 export function Giveaways() {
-  // The current time is computed only on the client after mount to avoid
-  // SSR/client hydration mismatches (Date.now() and locale date formatting differ).
-  const [now, setNow] = useState<number | null>(null)
+  const [open, setOpen] = useState(false)
+  const [username, setUsername] = useState("")
+  const [discordId, setDiscordId] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState(false)
 
-  useEffect(() => {
-    setNow(Date.now())
-    const id = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(id)
-  }, [])
+  function resetForm() {
+    setUsername("")
+    setDiscordId("")
+    setError("")
+    setSuccess(false)
+    setLoading(false)
+  }
 
-  const ready = now !== null
-  const diff = ready ? Math.max(0, TARGET - now) : 0
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24)
-  const minutes = Math.floor((diff / (1000 * 60)) % 60)
-  const seconds = Math.floor((diff / 1000) % 60)
-  const ended = ready && diff === 0
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError("")
 
-  const endDate = useMemo(() => {
-    if (!ready) return null
-    return new Date(TARGET).toLocaleString(undefined, {
-      weekday: "long",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "Europe/London",
-      timeZoneName: "short",
-    })
-  }, [ready])
+    if (username.trim().length < 2) {
+      setError("Enter your Discord username.")
+      return
+    }
+    if (!/^\d{17,20}$/.test(discordId.trim())) {
+      setError("Enter a valid Discord user ID (17-20 digits).")
+      return
+    }
 
-  const units = [
-    { label: "Days", value: days },
-    { label: "Hours", value: hours },
-    { label: "Minutes", value: minutes },
-    { label: "Seconds", value: seconds },
-  ]
+    setLoading(true)
+    try {
+      const res = await fetch("/api/giveaway/enter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ discordUsername: username.trim(), discordId: discordId.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? "Could not submit your entry.")
+      } else {
+        setSuccess(true)
+      }
+    } catch {
+      setError("Network error. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <section id="giveaways" className="py-20 md:py-28">
@@ -77,96 +94,150 @@ export function Giveaways() {
           </h2>
           <p className="mx-auto mt-5 max-w-md text-pretty text-lg leading-relaxed text-muted-foreground">
             We&apos;re giving away{" "}
-            <span className="font-semibold text-[#c4b5fd]">Discord Nitro</span> in{" "}
-            <span className="font-semibold text-foreground">2 days</span>. Join the Discord and stay active to enter!
+            <span className="font-semibold text-[#c4b5fd]">Discord Nitro</span>. This giveaway ends{" "}
+            <span className="font-semibold text-foreground">6th June 2026</span>. Click enter below to join!
           </p>
         </div>
 
-        {/* Countdown + side message */}
+        {/* Enter card + side message */}
         <div className="mx-auto mt-10 flex max-w-5xl flex-col items-stretch gap-6 lg:flex-row">
-        {/* Countdown card */}
-        <div
-          className="flex-1 rounded-2xl border border-[#7c3aed]/60 bg-card/40 p-8"
-          style={{ boxShadow: "0 0 30px rgba(124, 58, 237, 0.12), inset 0 0 30px rgba(124, 58, 237, 0.05)" }}
-        >
-          <div className="flex items-center justify-center gap-2 border-b border-[#7c3aed]/30 pb-4">
-            <Clock className="h-4 w-4 text-[#c4b5fd]" />
-            <span className="font-display text-sm font-bold uppercase tracking-[0.25em] text-[#c4b5fd]">
-              {ended ? "Giveaway Ended" : "Ends In"}
+          {/* Enter card */}
+          <div
+            className="flex flex-1 flex-col items-center justify-center gap-6 rounded-2xl border border-[#7c3aed]/60 bg-card/40 p-8 text-center"
+            style={{ boxShadow: "0 0 30px rgba(124, 58, 237, 0.12), inset 0 0 30px rgba(124, 58, 237, 0.05)" }}
+          >
+            <span className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[#7c3aed]/40 bg-background/40 text-[#c4b5fd]">
+              <Ticket className="h-7 w-7" />
             </span>
-          </div>
+            <div>
+              <p className="font-display text-2xl font-bold uppercase tracking-wide text-foreground">
+                Enter the Giveaway
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Giveaway ends <span className="font-semibold text-foreground">6th June 2026</span>
+              </p>
+            </div>
 
-          <div className="mt-6 grid grid-cols-4 gap-3">
-            {units.map((unit) => (
-              <div
-                key={unit.label}
-                className="flex flex-col items-center rounded-xl border border-[#7c3aed]/30 bg-background/40 py-4"
-              >
-                <span
-                  className="font-display text-3xl font-bold tabular-nums sm:text-4xl"
-                  style={{
-                    background: "linear-gradient(90deg, #ffffff 0%, #c4b5fd 100%)",
-                    WebkitBackgroundClip: "text",
-                    backgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                  }}
-                >
-                  {String(unit.value).padStart(2, "0")}
-                </span>
-                <span className="mt-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                  {unit.label}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Drawing on <span className="font-semibold text-foreground">{endDate ?? "soon"}</span>
-          </p>
-
-          <div className="mt-6 flex justify-center">
-            <Button
-              asChild
-              className="font-semibold text-white"
-              style={{ background: "linear-gradient(90deg, #7c3aed 0%, #a855f7 100%)" }}
+            <Dialog
+              open={open}
+              onOpenChange={(next) => {
+                setOpen(next)
+                if (!next) resetForm()
+              }}
             >
-              <a href="https://discord.gg/N7JuDnY5Bt" target="_blank" rel="noopener noreferrer">
-                Enter on Discord
-              </a>
-            </Button>
-          </div>
-        </div>
+              <DialogTrigger asChild>
+                <Button
+                  className="font-semibold text-white"
+                  style={{ background: "linear-gradient(90deg, #7c3aed 0%, #a855f7 100%)" }}
+                >
+                  <Ticket className="h-4 w-4" />
+                  Enter Giveaway
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Enter the Discord Nitro Giveaway</DialogTitle>
+                  <DialogDescription>
+                    Enter your Discord username and user ID to be entered. Enable Developer Mode in Discord, right-click
+                    your name, and choose &quot;Copy User ID&quot;.
+                  </DialogDescription>
+                </DialogHeader>
 
-        {/* Side message: how the winner is picked */}
-        <aside
-          className="flex flex-1 flex-col justify-center gap-6 rounded-2xl border border-[#7c3aed]/40 bg-card/30 p-8 lg:max-w-sm"
-          style={{ boxShadow: "inset 0 0 30px rgba(124, 58, 237, 0.05)" }}
-        >
-          <h3 className="font-display text-lg font-bold uppercase tracking-[0.2em] text-[#c4b5fd]">
-            How it works
-          </h3>
-          <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#7c3aed]/40 bg-background/40 text-[#c4b5fd]">
-              <Bell className="h-4 w-4" />
-            </span>
-            <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
-              When the timer runs out,{" "}
-              <span className="font-semibold text-foreground">@everyone</span> will be pinged in the
-              Discord server.
-            </p>
+                {success ? (
+                  <div className="flex flex-col items-center gap-3 py-6 text-center">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <CheckCircle2 className="h-6 w-6" />
+                    </span>
+                    <p className="font-display text-lg font-bold text-foreground">You&apos;re entered!</p>
+                    <p className="text-sm text-muted-foreground">
+                      Good luck. The winner will be drawn on 6th June 2026.
+                    </p>
+                    <Button
+                      className="mt-2 font-semibold"
+                      onClick={() => {
+                        setOpen(false)
+                        resetForm()
+                      }}
+                    >
+                      Done
+                    </Button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="giveaway-username">Discord Username</Label>
+                      <Input
+                        id="giveaway-username"
+                        value={username}
+                        onChange={(e) => {
+                          setUsername(e.target.value)
+                          setError("")
+                        }}
+                        placeholder="e.g. chrxme.gg"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="giveaway-id">Discord User ID</Label>
+                      <Input
+                        id="giveaway-id"
+                        inputMode="numeric"
+                        value={discordId}
+                        onChange={(e) => {
+                          setDiscordId(e.target.value)
+                          setError("")
+                        }}
+                        placeholder="e.g. 1234567890123456789"
+                        autoComplete="off"
+                      />
+                    </div>
+
+                    {error && (
+                      <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                        <AlertCircle className="h-4 w-4 shrink-0" />
+                        {error}
+                      </div>
+                    )}
+
+                    <Button
+                      type="submit"
+                      className="font-semibold text-white"
+                      style={{ background: "linear-gradient(90deg, #7c3aed 0%, #a855f7 100%)" }}
+                      disabled={loading}
+                    >
+                      {loading ? "Entering..." : "Submit Entry"}
+                    </Button>
+                  </form>
+                )}
+              </DialogContent>
+            </Dialog>
           </div>
-          <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#7c3aed]/40 bg-background/40 text-[#c4b5fd]">
-              <Disc3 className="h-4 w-4" />
-            </span>
-            <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
-              Everyone who{" "}
-              <span className="font-semibold text-foreground">reacts to the message</span> gets put
-              on a <span className="font-semibold text-[#c4b5fd]">wheel spin</span> to decide the
-              winner.
-            </p>
-          </div>
-        </aside>
+
+          {/* Side message: how the winner is picked */}
+          <aside
+            className="flex flex-1 flex-col justify-center gap-6 rounded-2xl border border-[#7c3aed]/40 bg-card/30 p-8 lg:max-w-sm"
+            style={{ boxShadow: "inset 0 0 30px rgba(124, 58, 237, 0.05)" }}
+          >
+            <h3 className="font-display text-lg font-bold uppercase tracking-[0.2em] text-[#c4b5fd]">How it works</h3>
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#7c3aed]/40 bg-background/40 text-[#c4b5fd]">
+                <Bell className="h-4 w-4" />
+              </span>
+              <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
+                When the giveaway ends, <span className="font-semibold text-foreground">@everyone</span> will be pinged
+                in the Discord server.
+              </p>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#7c3aed]/40 bg-background/40 text-[#c4b5fd]">
+                <Disc3 className="h-4 w-4" />
+              </span>
+              <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
+                Everyone who <span className="font-semibold text-foreground">enters above</span> gets put on a{" "}
+                <span className="font-semibold text-[#c4b5fd]">wheel spin</span> to decide the winner.
+              </p>
+            </div>
+          </aside>
         </div>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">by @chrxme.gg</p>
